@@ -2,6 +2,7 @@ const OpenAI = require('openai');
 const express = require('express');
 const swaggerUI = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
+const { FinancialDiagnosis, Data, Diagnosis, Item, Priority } = require('./classes/FinancialDiagnosis');
 
 require('dotenv').config();
 
@@ -11,14 +12,12 @@ app.use(express.json());
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
 app.get('/', (req, res) => {
-  res.redirect('/api-docs');
+    res.redirect('/api-docs');
 });
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
-
-
 
 /**
  * @swagger
@@ -68,69 +67,117 @@ const openai = new OpenAI({
  *       200:
  *         description: Respuesta exitosa
  */
+
 app.post('/', async (req, res) => {
-    try {        
-        const { prompt } = req.body;
-        console.log('Received prompt: ', prompt);
+    const { prompt } = req.body;
 
-        const dummy = {
-            user: 'Daniela',
-            incomes: [
-                {
-                    name: 'sueldo',
-                    ammount: 1000000
-                }              
-            ],
-            outcomes: [
-                {
-                    name: 'tarjeta de credito',
-                    ammount: 800000,
-                    total_quotas: 3,
-                    paid_quotas: 0
-                },  
-                {
-                    name: 'alimentación',
-                    ammount: 200000,
-                    total_quotas: 1,
-                    paid_quotas: 0
-                },  
-            ]
-        }
-
-        // Instrucciones y reglas de cómo debe responder Gepeto, mientras más abajo la instrucción, menos prioritaria
-        const rules = '1. Haz un plan de pago con el contenido enviado. 2. Responde en español.'; 
-
-        const messages = [
+    const dummy = {
+        user: 'Daniela',
+        incomes: [
             {
-                'role': 'system',
-                'content': rules
+                name: 'sueldo',
+                ammount: 1000000
+            }
+        ],
+        outcomes: [
+            {
+                name: 'tarjeta de credito',
+                ammount: 800000,
+                total_quotas: 3,
+                paid_quotas: 0
             },
             {
-                'role': 'user',
-                'content': 'Este es el contenido a analizar : ' + JSON.stringify(dummy)
-            }
+                name: 'alimentación',
+                ammount: 200000,
+                total_quotas: 1,
+                paid_quotas: 0
+            },
         ]
+    }
 
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: messages,
-            temperature: 0, //maneja la alucinación del modelo, 0 a 2
-            top_p: 1,
-            // n: 1
-        });
+    const rules =
+        `1. Eres un asesor financiero chileno y amable llamado FinAlly que diagnostica, prioriza y optimiza las finanzas de los usuarios que pidan tu asesoría.
+         2. Tu respuesta debe ser un JSON válido, no una cadena de texto, sin saltos de línea innecesarios, ni comillas escapadas.
+         3. Haz un diagnóstico y evaluación del contenido proporcionado.
+         4. La respuesta debe tener la siguiente estructura de clases:
+            class FinancialDiagnosis {
+                constructor(success, data) {
+                this.success = success;
+                this.data = new Data(data);
+                }
+            }
+            
+            class Data {
+                constructor({ diagnosis, priorities, recommendations }) {
+                this.diagnosis = new Diagnosis(diagnosis);
+                this.priorities = priorities.map(priority => new Priority(priority));
+                this.recommendations = recommendations;
+                }
+            }
+            
+            class Diagnosis {
+                constructor({ user, total_income, total_outcomes, balance, outcome_analysis }) {
+                this.user = user;
+                this.total_income = total_income;
+                this.total_outcomes = total_outcomes;
+                this.balance = balance;
+                this.outcome_analysis = outcome_analysis.map(item => new Item(item)); 
+                }
+            }
+            
+            class Item {
+                constructor({ ammount, total_quotas, paid_quotas, remaining_quotas, monthly_payment }) {
+                this.ammount = ammount;
+                this.total_quotas = total_quotas;
+                this.paid_quotas = paid_quotas;
+                this.remaining_quotas = remaining_quotas;
+                this.monthly_payment = monthly_payment;
+                }
+            }
+            
+            class Priority {
+                constructor({ name, reason }) {
+                this.name = name;
+                this.reason = reason;
+                }
+            }`;
 
-        let formattedResponse = '<p>' + response.choices[0].message.content.replace(/\n/g, '</p><p>') + '</p>';
+    const userContent =
+        `${rules}
+         6. Este es el contenido a analizar: ${JSON.stringify(dummy)}`;
 
+    const messages = [
+        {
+            'role': 'system',
+            'content': rules
+        },
+        {
+            'role': 'user',
+            'content': userContent
+        },
+    ];
+
+    const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: messages,
+        temperature: 0,
+        top_p: 1,
+    });
+
+    let formattedResponse = response.choices[0].message.content.trim();
+
+    try {
+        const jsonResponse = JSON.parse(formattedResponse);
         return res.status(200).json({
             success: true,
-            data: formattedResponse
+            data: jsonResponse
         });
-    } catch (error) {
-        console.error('Error: ', error);
+    } catch (parseError) {
+        console.error('Parsing Error: ', parseError);
         return res.status(500).json({
             success: false,
-            message: 'An error occurred while processing your request.',
-            error: error.message,
+            message: 'Failed to generate a valid JSON response.',
+            error: parseError.message,
         });
     }
 });
