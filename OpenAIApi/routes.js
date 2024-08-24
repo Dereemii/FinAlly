@@ -19,6 +19,7 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
+
 /**
  * @swagger
  * /:
@@ -32,15 +33,24 @@ const openai = new OpenAI({
  *           schema:
  *             type: object
  *             properties:
- *               user:
- *                 type: string
- *                 example: 'Daniela'
+ *               userInfo:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     example: 'Daniela'
+ *                   age:
+ *                     type: integer
+ *                     example: 29
+ *                   mail:
+ *                     type: string
+ *                     example: 'danielacortezvaras@gmail.com'
  *               incomes:
  *                 type: array
  *                 items:
  *                   type: object
  *                   properties:
- *                     name:
+ *                     category:
  *                       type: string
  *                       example: 'sueldo'
  *                     ammount:
@@ -51,10 +61,10 @@ const openai = new OpenAI({
  *                 items:
  *                   type: object
  *                   properties:
- *                     name:
+ *                     category:
  *                       type: string
  *                       example: 'tarjeta de credito'
- *                     ammount:
+ *                     total_ammount:
  *                       type: number
  *                       example: 800000
  *                     total_quotas:
@@ -66,29 +76,95 @@ const openai = new OpenAI({
  *     responses:
  *       200:
  *         description: Respuesta exitosa
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     diagnosis:
+ *                       type: object
+ *                       properties:
+ *                         user:
+ *                           type: string
+ *                           example: 'Daniela'
+ *                         total_income:
+ *                           type: number
+ *                           example: 1000000
+ *                         total_outcomes:
+ *                           type: number
+ *                           example: 1000000
+ *                         balance:
+ *                           type: number
+ *                           example: 0
+ *                         outcome_analysis:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               ammount:
+ *                                 type: number
+ *                                 example: 800000
+ *                               total_quotas:
+ *                                 type: integer
+ *                                 example: 3
+ *                               paid_quotas:
+ *                                 type: integer
+ *                                 example: 0
+ *                               remaining_quotas:
+ *                                 type: integer
+ *                                 example: 3
+ *                               monthly_payment:
+ *                                 type: number
+ *                                 example: 266666.67
+ *                     priorities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: 'tarjeta de credito'
+ *                           reason:
+ *                             type: string
+ *                             example: 'Alta tasa de interés'
+ *                     recommendations:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ['Ajustar el presupuesto', 'Considerar consolidar deuda']
  */
-
 app.post('/', async (req, res) => {
     const { prompt } = req.body;
 
     const dummy = {
-        user: 'Daniela',
+        userInfo:{
+           name: 'Daniela',
+           age: 29,
+           mail: 'danielacortezvaras@gmail.com'
+        },
         incomes: [
             {
-                name: 'sueldo',
+                category: 'sueldo',
                 ammount: 1000000
             }
         ],
         outcomes: [
             {
-                name: 'tarjeta de credito',
-                ammount: 800000,
+                category: 'tarjeta de credito',
+                total_ammount: 800000,
                 total_quotas: 3,
-                paid_quotas: 0
+                paid_quotas: 0,
+
             },
             {
-                name: 'alimentación',
-                ammount: 200000,
+                category: 'alimentación',
+                total_ammount: 200000,
                 total_quotas: 1,
                 paid_quotas: 0
             },
