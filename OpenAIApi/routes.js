@@ -72,7 +72,10 @@ const openai = new OpenAI({
  *                       example: 3
  *                     paid_quotas:
  *                       type: integer
- *                       example: 0
+ *                       example: 0,
+ *                     file:
+ *                       type: string
+ *                       example: 'Aqui iría un base64'
  *     responses:
  *       200:
  *         description: Respuesta exitosa
@@ -160,13 +163,15 @@ app.post('/', async (req, res) => {
                 total_ammount: 800000,
                 total_quotas: 3,
                 paid_quotas: 0,
+                file: ''
 
             },
             {
                 category: 'alimentación',
                 total_ammount: 200000,
                 total_quotas: 1,
-                paid_quotas: 0
+                paid_quotas: 0,
+                file: ''
             },
         ]
     }
