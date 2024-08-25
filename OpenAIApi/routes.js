@@ -3,11 +3,13 @@ const express = require('express');
 const swaggerUI = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 const pdf = require('pdf-parse');
+const cors = require('cors');
 
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
+app.use(cors()); 
 
 app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
