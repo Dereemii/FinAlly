@@ -302,6 +302,40 @@ app.post('/', async (req, res) => {
     formattedResponse3 = formattedResponse3.replace(/'/g, '"');
     jsonObject.recommendations = JSON.parse(formattedResponse3);   
 
+    //propuesta
+
+        const rulesPromp4 =
+        `
+        1. Eres un asesor financiero llamado FinAlly, debes usar un tono amable.
+        2. Con el listado de gastos proporcionados, me puedes hacer un plan de ahorro de 6 meses para lograr el objetivo de 
+        ${payload.userInfo.name} para lograr su sueño de ${payload.userInfo.goal.objective} en un plazo de ${payload.userInfo.goal.timeLimit} en un parrafo de 100 palabras
+        `;
+
+    const userContent4 =
+        `${rulesPromp4}
+         3. Este es el listado de gastos a analizar: '${JSON.stringify(jsonObject.detail)}'`;
+    const messages4 = [
+        {
+            'role': 'system',
+            'content': rulesPromp4
+        },
+        {
+            'role': 'user',
+            'content': userContent4
+        }
+    ];
+
+    const response4 = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: messages4,
+        temperature: 0,
+        top_p: 1,
+    });
+
+    const plan = response4.choices[0].message.content.trim();
+    jsonObject.plan = plan;
+
+
     try {
         return res.status(200).json({
             success: true,
