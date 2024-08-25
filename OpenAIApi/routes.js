@@ -207,41 +207,100 @@ app.post('/', async (req, res) => {
         4. Tu respuesta debe ser un JSON válido, no una cadena de texto, sin saltos de línea, ni comillas escapadas
         `;
 
-    //Categoriza los montos en "Pequeños" (menos de 10000), "Medianos" (10000 - 50000), y "Grandes" (más de 50000).
-    //             Fecha, Oficina, N° Documento, Descripción, Cargo, Abono
-
-
-    const userContent =
+    const userContent1 =
         `${rulesPromp1}
          5. Este es el contenido a analizar: '${payload.file.text}'`;
-    const messages = [
+    const messages1 = [
         {
             'role': 'system',
             'content': rulesPromp1
         },
         {
             'role': 'user',
-            'content': userContent
+            'content': userContent1
         }
     ];
 
-    const response = await openai.chat.completions.create({
+    const response1 = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
-        messages: messages,
+        messages: messages1,
         temperature: 0,
         top_p: 1,
     });
 
-
-    const formattedResponse = response.choices[0].message.content.trim();
-    const jsonObject = JSON.parse(formattedResponse);
+    1
+    const formattedResponse1 = response1.choices[0].message.content.trim();
+    let jsonObject = JSON.parse(formattedResponse1);
     jsonObject.incomesTotal = payload.income;
 
-    console.log(jsonObject);
-
-    let category = calculateCategory(jsonObject.incomesTotal, jsonObject.outcomesTotal);
-    console.log(category);
+    // categoria
+    const category = calculateCategory(jsonObject.incomesTotal, jsonObject.outcomesTotal);
     jsonObject.category = category;
+
+    //analisis personal
+
+    const rulesPromp2 =
+        `
+        1. Eres un asesor financiero llamado FinAlly, debes usar un tono amable.
+        2. Con el listado de gastos proporcionados, que puedes decir de la personalidad de ${payload.userInfo.name} en un parrafo 
+        `;
+
+    const userContent2 =
+        `${rulesPromp2}
+         3. Este es el listado de gastos a analizar: '${JSON.stringify(jsonObject.detail)}'`;
+    const messages2 = [
+        {
+            'role': 'system',
+            'content': rulesPromp2
+        },
+        {
+            'role': 'user',
+            'content': userContent2
+        }
+    ];
+
+    const response2 = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: messages2,
+        temperature: 0,
+        top_p: 1,
+    });
+
+    const profile = response2.choices[0].message.content.trim();
+    jsonObject.profile = profile;
+
+    // recomendaciones 
+    const rulesPromp3 =
+        `
+        1. Eres un asesor financiero llamado FinAlly, debes usar un tono amable.
+        2. Con la información proporcionada, dale a ${payload.userInfo.name} dos consejo spara lograr su sueño de ${payload.userInfo.goal.objective} en un plazo de ${payload.userInfo.goal.timeLimit} en dos parrafos de 50 palabras cada uno.
+        3. La respuesta debe ser un array JSON válido de JavaScript, sin ningún texto adicional, sin comillas triples, sin bloques de código. Solo devuelve el array en formato JSON puro en este formato ['aqui va el consejo 1','aqui va el consejo 2'].
+        `;
+
+    const userContent3 =
+        `${rulesPromp3}
+         3. Esta es la información a analizar: '${JSON.stringify(jsonObject)}'`;
+    const messages3 = [
+        {
+            'role': 'system',
+            'content': rulesPromp3
+        },
+        {
+            'role': 'user',
+            'content': userContent3
+        }
+    ];
+
+    const response3 = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: messages3,
+        temperature: 0,
+        top_p: 1
+    });
+
+    let formattedResponse3 = response3.choices[0].message.content.trim();
+    formattedResponse3 = formattedResponse3.replace(/'/g, '"');
+    jsonObject.recommendations = JSON.parse(formattedResponse3);   
 
     try {
         return res.status(200).json({
